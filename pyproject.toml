@@ -1,6 +1,6 @@
 [project]
 name = "certbot-dns-contabo"
-version = "0.1.0"
+version = "0.1.1"
 description = "Contabo DNS Authenticator plugin for Certbot"
 readme = "README.md"
 license = { text = "MIT" }
@@ -46,6 +46,4 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
-
-[tool.setuptools.packages.find]
-where = ["src"]
+py-modules = ["dns_contabo"]
