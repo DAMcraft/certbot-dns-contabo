@@ -4,8 +4,6 @@ This is a Certbot plugin to automate DNS-01 challenges for domains whose DNS is 
 interacting with the Contabo web interface through web scraping, as Contabo does not currently offer an official API for
 DNS management.
 
----
-
 ## Important
 
 * **Web Scraping**: This plugin relies on web scraping Contabo's website. If Contabo changes its
@@ -15,7 +13,6 @@ DNS management.
   You must use an account without 2FA for this plugin to work. Attempting to use it with a 2FA-enabled account will
   result in login failure (Might be supported in the future, but currently not available).
 
----
 
 ## Installation
 
@@ -57,4 +54,3 @@ sudo certbot certonly \
 ## Disclaimer
 I am not affiliated with Contabo in any way. This plugin can stop working at any time if Contabo changes their website,
 which *could* even lead to stuff breaking on your Contabo account. 
-```
