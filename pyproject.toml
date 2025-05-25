@@ -1,9 +1,10 @@
 [project]
 name = "certbot-dns-contabo"
-version = "0.1.1"
+version = "0.2.0"
 description = "Contabo DNS Authenticator plugin for Certbot"
 readme = "README.md"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE.txt"]
 authors = [
   { name = "Lina", email = "me@lina.sh" }
 ]
@@ -11,14 +12,14 @@ requires-python = ">=3.5"
 dependencies = [
   "certbot>=2.0.0",
   "requests",
-  "beautifulsoup4"
+  "beautifulsoup4",
+  "pyotp"
 ]
 keywords = ["certbot", "dns", "contabo", "letsencrypt", "tls", "ssl", "dns-01"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Plugins",
     "Intended Audience :: System Administrators",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.6",
     "Programming Language :: Python :: 3.7",

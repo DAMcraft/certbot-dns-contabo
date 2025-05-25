@@ -1,7 +1,9 @@
 import logging
+
 import requests
 from bs4 import BeautifulSoup
 from certbot.plugins import dns_common
+import pyotp
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +49,7 @@ class Authenticator(dns_common.DNSAuthenticator):
             {
                 "email": "Contabo account email",
                 "password": "Contabo account password",
+                # "2fa_secret": "Contabo 2FA TOTP secret (optional, only add if 2fa is used)"
             },
         )
         logger.debug("Credentials configured.")
@@ -212,7 +215,54 @@ class Authenticator(dns_common.DNSAuthenticator):
             logger.error("Error during login POST request: %s", e)
             raise ValueError("Connection error during login attempt. Details: %s" % e)
 
-        if login_post_req.status_code != 302:
+        has_2fa = 'otp_login_dialog.dialog( "open" );' in login_post_req.text
+        if login_post_req.status_code == 200 and has_2fa:
+            two_fa_secret = self.credentials.conf('2fa_secret')
+            if not two_fa_secret:
+                logger.error("Two-factor authentication is enabled on your Contabo account. "
+                             "Please set dns_contabo_2fa_secret in your credentials file. You can get the secret "
+                             "by re-setting your 2FA in the Contabo account settings.")
+                raise ValueError("Two-factor authentication is enabled on your Contabo account. "
+                                 "Please set 'dns_contabo_2fa_secret' in your credentials file. "
+                                 "You can get the secret by re-setting your 2FA in the Contabo account settings.")
+
+            logger.info("Two-factor authentication is enabled. Generating TOTP code...")
+            # generate the TOTP code
+            generated_otp = pyotp.TOTP(two_fa_secret).now()
+            logger.debug("Generated TOTP code: %s", generated_otp)
+            login_resp_soup = BeautifulSoup(login_post_req.content, "html.parser")
+            otp_login_form = login_resp_soup.find("form", {"id": "otp_login_form"})
+            if not otp_login_form:
+                logger.error("Could not find the 2FA login form on the page.")
+                raise ValueError("Failed to find the 2FA login form. Contabo's login page structure might have changed."
+                                 " Please report this issue. ")
+            otp_token_key_input = otp_login_form.find("input", {"name": "data[_Token][key]"})
+            otp_token_fields_input = otp_login_form.find("input", {"name": "data[_Token][fields]"})
+            if not (otp_token_key_input and otp_token_fields_input):
+                logger.error("Failed to extract CSRF token inputs from the 2FA login form.")
+                raise ValueError("Failed to extract CSRF token values from the 2FA login form. "
+                                 "Contabo's login page structure might have changed. "
+                                 "Please report this issue.")
+            otp_token_key = otp_token_key_input.get("value")
+            otp_token_fields = otp_token_fields_input.get("value")
+
+            login_post_req = self.s.post(
+                CONTABO_BASE_URL + "/account/login_otp",
+                data={
+                    'data[otp_password]': generated_otp,
+                    'data[_Token][fields]': otp_token_fields,
+                    'data[_Token][key]': otp_token_key,
+                    'data[_Token][unlocked]': ''
+                },
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                allow_redirects=False
+            )
+            if login_post_req.status_code != 302:
+                logger.error("2FA login failed. Expected status 302, got %s. Check your 2FA secret.",
+                             login_post_req.status_code)
+                raise ValueError("2FA login failed. Please check your 2FA secret.")
+
+        elif login_post_req.status_code != 302:
             logger.error("Login failed. Expected status 302, got %s. Check credentials.", login_post_req.status_code)
             raise ValueError("Login failed. Please check your credentials.")
 
